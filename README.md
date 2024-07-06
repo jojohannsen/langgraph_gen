@@ -17,7 +17,8 @@ call_model(AgentState)
 call_tool
   => call_model
   
-"""```
+"""
+```
 
 ### human-in-loop.ipynb [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jojohannsen/langgraph_gen/blob/main/human-in-loop.ipynb)
   
