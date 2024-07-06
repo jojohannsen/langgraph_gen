@@ -5,6 +5,9 @@ Nodes mostly unchanged, take 'state' parameter.
 
 Conditional edges simplified, edge traversal determined by boolean function that takes 'state' as parameter.
 
+### state-model.ipynb [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jojohannsen/langgraph_gen/blob/main/state-model.ipynb)
+
+
 ### human-in-loop.ipynb [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jojohannsen/langgraph_gen/blob/main/human-in-loop.ipynb)
   
 ```python
