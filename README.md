@@ -7,6 +7,17 @@ Conditional edges simplified, edge traversal determined by boolean function that
 
 ### state-model.ipynb [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jojohannsen/langgraph_gen/blob/main/state-model.ipynb)
 
+```python
+graph_spec = """
+
+call_model(AgentState)
+  no_tools => END
+  => call_tool
+
+call_tool
+  => call_model
+  
+"""```
 
 ### human-in-loop.ipynb [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jojohannsen/langgraph_gen/blob/main/human-in-loop.ipynb)
   
