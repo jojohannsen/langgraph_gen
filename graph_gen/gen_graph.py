@@ -25,11 +25,14 @@ def parse_graph_spec(graph_spec):
             current_node = node_info[0].strip()
             start_node = current_node
             state = node_info[1].strip(')')
+            memory = None
+            if ',' in state:
+                state, memory = state.split(',')
             graph[current_node] = {'state': state, 'edges': []}
         else:
             current_node = line
             graph[current_node] = {'state': state, 'edges': []}
-    return graph, start_node
+    return graph, start_node, memory
 
 
 def mk_conditions(node_name, node_dict):
@@ -103,7 +106,7 @@ def true_fn(state):
     return True
 
 def gen_graph(graph_name, graph_spec):
-    graph, start_node = parse_graph_spec(graph_spec)
+    graph, start_node, memory = parse_graph_spec(graph_spec)
 
     # Generate the graph state, node definitions, and entry point
     graph_setup = f"{graph_name} = StateGraph({graph[start_node]['state']})\n"
@@ -118,5 +121,7 @@ def gen_graph(graph_name, graph_spec):
     for node_name, node_dict in graph.items():
         node_code.append(mk_conditions(node_name, node_dict))
         node_code.append(mk_conditional_edges(graph_name, node_name, node_dict))
-
-    return graph_setup + "\n".join(node_code) + "\n\n" + f"\n\n{graph_name} = {graph_name}.compile()"
+    mem_spec = ""
+    if memory:
+        mem_spec = f"checkpointer={memory}"
+    return graph_setup + "\n".join(node_code) + "\n\n" + f"\n\n{graph_name} = {graph_name}.compile({mem_spec})"
