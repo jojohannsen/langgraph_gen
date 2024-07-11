@@ -25,22 +25,21 @@ def parse_graph_spec(graph_spec):
             current_node = node_info[0].strip()
             start_node = current_node
             state = node_info[1].strip(')')
-            memory = None
-            if ',' in state:
-                state, memory = state.split(',')
             graph[current_node] = {'state': state, 'edges': []}
         else:
             current_node = line
             graph[current_node] = {'state': state, 'edges': []}
-    return graph, start_node, memory
+    return graph, start_node
 
+def all_true_fn(edges):
+    return all(edge['condition'] == 'true_fn' for edge in edges)
 
 def mk_conditions(node_name, node_dict):
     edges = node_dict['edges']
     state_type = node_dict['state']
 
     # Special case: single 'true_fn' condition
-    if len(edges) == 1 and edges[0]['condition'] == 'true_fn':
+    if  all_true_fn(edges):
         return ""
 
     function_body = [f"def after_{node_name}(state: {state_type}):"]
@@ -73,13 +72,16 @@ def mk_conditions(node_name, node_dict):
 def mk_conditional_edges(graph_name, node_name, node_dict):
     edges = node_dict['edges']
 
-    # Case 1: Single 'true_fn' condition
-    if len(edges) == 1 and edges[0]['condition'] == 'true_fn':
-        destination = edges[0]['destination']
-        if destination == 'END':
-            return f"{graph_name}.add_edge('{node_name}', END)"
-        else:
-            return f"{graph_name}.add_edge('{node_name}', '{destination}')"
+    # Case 1: parallel output
+    if all_true_fn(edges):
+        edge_code = ""
+        for edge in edges:
+            destination = edge['destination']
+            if destination == 'END':
+                edge_code += f"{graph_name}.add_edge('{node_name}', END)\n"
+            else:
+                edge_code += f"{graph_name}.add_edge('{node_name}', '{destination}')\n"
+        return edge_code
 
     # Case 2: Multiple conditions
     else:
@@ -105,8 +107,8 @@ def mk_conditional_edges(graph_name, node_name, node_dict):
 def true_fn(state):
     return True
 
-def gen_graph(graph_name, graph_spec):
-    graph, start_node, memory = parse_graph_spec(graph_spec)
+def gen_graph(graph_name, graph_spec, memory=None):
+    graph, start_node = parse_graph_spec(graph_spec)
 
     # Generate the graph state, node definitions, and entry point
     graph_setup = f"{graph_name} = StateGraph({graph[start_node]['state']})\n"
