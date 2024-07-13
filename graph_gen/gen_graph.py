@@ -47,16 +47,26 @@ def mk_conditions(node_name, node_dict):
     for i, edge in enumerate(edges):
         condition = edge['condition']
         destination = edge['destination']
-
+    
+        if ',' in destination:
+            # Split the destination by commas and strip spaces
+            destinations = [d.strip() for d in destination.split(',')]
+            # Format the return statement with a list
+            return_statement = f"return {destinations}"
+        else:
+            # Format the return statement with a single value
+            return_statement = f"return '{destination}'"
+    
         if condition == 'true_fn':
-            function_body.append(f"    return '{destination}'")
+            function_body.append(f"    {return_statement}")
             break  # Exit the loop as this is always true
         elif i == 0:
             function_body.append(f"    if {condition}(state):")
         else:
             function_body.append(f"    elif {condition}(state):")
+    
+        function_body.append(f"        {return_statement}")
 
-        function_body.append(f"        return '{destination}'")
 
     # Only add the else clause if we didn't encounter 'true_fn'
     if condition != 'true_fn':
@@ -81,16 +91,24 @@ def mk_conditional_edges(graph_name, node_name, node_dict):
                 edge_code += f"{graph_name}.add_edge('{node_name}', END)\n"
             else:
                 edge_code += f"{graph_name}.add_edge('{node_name}', '{destination}')\n"
-        return edge_code
+        return edge_code.rstrip()
 
     # Case 2: Multiple conditions
     else:
         # Helper function to create dictionary entries
+        def maybe_multiple(s):
+            if "," in s:
+                data = s.split(',')
+                quoted = [f"'{x.strip()}'" for x in data]
+                return "[" + ','.join(quoted) + "]"
+            else:
+                return f"'{s}'"
+
         def mk_entry(edge):
             if edge['destination'] == 'END':
                 return f"'{edge['destination']}': END"
             else:
-                return f"'{edge['destination']}': '{edge['destination']}'"
+                return f"'{edge['destination']}': {maybe_multiple(edge['destination'])}"
 
         # Create the dictionary string
         dict_entries = ', '.join([mk_entry(e) for e in edges])
@@ -98,7 +116,17 @@ def mk_conditional_edges(graph_name, node_name, node_dict):
         if len(edges) == 1 and edges[0]['condition'] != 'true_fn':
             dict_entries += ", END: END"
         node_dict_str = f"{node_name}_dict = {{{dict_entries}}}"
-
+        multiple = any("," in edge['destination'] for edge in edges)
+        if multiple:
+            # not really understanding, but it seems that in this case, we just have a list of 
+            # nodes instead of a dict for third parameter
+            s = set()
+            for edge in edges:
+                destinations = edge['destination'].split(',')
+                for dest in destinations:
+                    s.add(dest.strip())
+            node_dict_str = f"{node_name}_dict = {list(s)}"
+            
         # Create the add_conditional_edges call
         add_edges_str = f"{graph_name}.add_conditional_edges('{node_name}', after_{node_name}, {node_name}_dict)"
 
@@ -121,9 +149,13 @@ def gen_graph(graph_name, graph_spec, memory=None):
     # Generate the code for edges and conditional edges
     node_code = []
     for node_name, node_dict in graph.items():
-        node_code.append(mk_conditions(node_name, node_dict))
-        node_code.append(mk_conditional_edges(graph_name, node_name, node_dict))
+        conditions = mk_conditions(node_name, node_dict)
+        if conditions: 
+            node_code.append(conditions)
+        conditional_edges = mk_conditional_edges(graph_name, node_name, node_dict)
+        if conditional_edges:
+            node_code.append(conditional_edges)
     mem_spec = ""
     if memory:
         mem_spec = f"checkpointer={memory}"
-    return graph_setup + "\n".join(node_code) + "\n\n" + f"\n\n{graph_name} = {graph_name}.compile({mem_spec})"
+    return graph_setup + "\n".join(node_code) + "\n\n" + f"{graph_name} = {graph_name}.compile({mem_spec})"
