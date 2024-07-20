@@ -1,3 +1,5 @@
+import re
+
 def transform_graph_spec(graph_spec: str) -> str:
     lines = graph_spec.split('\n')
     transformed_lines = []
@@ -14,6 +16,17 @@ def transform_graph_spec(graph_spec: str) -> str:
             transformed_lines.append(line)
 
     return '\n'.join(transformed_lines)
+
+
+def parse_string(input_string):
+    pattern = r"\[(\w+)\((\w+) in (\w+)\)\]"
+    match = re.match(pattern, input_string)
+    
+    if match:
+        function, var_name, state_field = match.groups()
+        return function, var_name, state_field
+    else:
+        raise ValueError("String format is incorrect")
 
 
 def parse_graph_spec(graph_spec):
@@ -113,6 +126,11 @@ def mk_conditional_edges(graph_name, node_name, node_dict):
                 for x in data:
                     x = x.strip()
                     edge_code += f"{graph_name}.add_edge('{node_name}', '{x}')\n"
+            elif '[' in destination:
+                function, var_name, state_field = parse_string(destination)
+                edge_code += f"def after_{node_name}(state):\n"
+                edge_code += f"    return [Send('{function}', {{'{var_name}': s}}) for s in state['{state_field}']]\n"
+                edge_code += f"{graph_name}.add_conditional_edges('{node_name}', after_{node_name}, ['{function}'])\n"
             else:
                 edge_code += f"{graph_name}.add_edge('{node_name}', '{destination}')\n"
         return edge_code.rstrip()
