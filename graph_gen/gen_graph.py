@@ -1,4 +1,23 @@
+def transform_graph_spec(graph_spec: str) -> str:
+    lines = graph_spec.split('\n')
+    transformed_lines = []
+
+    for line in lines:
+        if '=>' in line and not line[0].isspace():
+            parts = line.split('=>')
+            if parts[0].strip():
+                transformed_lines.append(parts[0].strip())
+                transformed_lines.append(f"  => {parts[1].strip()}")
+            else:
+                transformed_lines.append(line)
+        else:
+            transformed_lines.append(line)
+
+    return '\n'.join(transformed_lines)
+
+
 def parse_graph_spec(graph_spec):
+    graph_spec = transform_graph_spec(graph_spec)
     TRUE_FN = 'true_fn'
     graph = {}
     current_node = None
@@ -89,6 +108,11 @@ def mk_conditional_edges(graph_name, node_name, node_dict):
             destination = edge['destination']
             if destination == 'END':
                 edge_code += f"{graph_name}.add_edge('{node_name}', END)\n"
+            elif ',' in destination:
+                data = destination.split(',')
+                for x in data:
+                    x = x.strip()
+                    edge_code += f"{graph_name}.add_edge('{node_name}', '{x}')\n"
             else:
                 edge_code += f"{graph_name}.add_edge('{node_name}', '{destination}')\n"
         return edge_code.rstrip()
