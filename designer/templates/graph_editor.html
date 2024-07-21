@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Specification Editor</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .cursor-info {
+            background-color: #f0f0f0;
+            padding: 5px;
+            font-family: monospace;
+        }
+
+        .editor {
+            flex-grow: 1;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        <
+        style >
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .cursor-info {
+            background-color: #f0f0f0;
+            padding: 5px;
+            font-family: monospace;
+        }
+
+        .editor {
+            flex-grow: 1;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .line {
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre;
+            min-height: 1em;
+        }
+
+        .line:focus {
+            outline: none;
+            background-color: #2a2a2a;
+        }
+
+        .cyan {
+            color: #00ffff;
+        }
+
+        .lg_condition {
+            color: #ffa500; /* This was previously orange */
+        }
+
+        .lg_node {
+            color: #00ff00; /* This was previously green */
+        }
+    </style>
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="cursor-info" id="cursorInfo">Cursor Position: Line 0, Ch 0</div>
+    <div class="editor" id="editor"></div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const editor = document.getElementById('editor');
+        const cursorInfo = document.getElementById('cursorInfo');
+        let lines = [];
+
+        function getLgConditionLength(clickedElement) {
+            // Check if the clicked element is an lg_node
+            if (clickedElement && clickedElement.classList.contains('lg_node')) {
+                let sibling = clickedElement.previousElementSibling;
+
+                // Check if there's a sibling and if it's an lg_condition
+                if (sibling && sibling.classList.contains('lg_condition')) {
+                    return sibling.textContent.trim().length;
+                }
+            }
+
+            // Return 0 if we didn't click in an lg_node or there's no lg_condition sibling
+            return 0;
+        }
+
+        function handleLineClick(event) {
+            updateCursorInfo(event.target);
+
+            // Find the clicked element and its class
+            let clickedElement = event.target;
+            while (clickedElement && !clickedElement.className && clickedElement !== this) {
+                clickedElement = clickedElement.parentElement;
+            }
+
+            if (clickedElement && clickedElement.className) {
+                console.log('Clicked in element with class:', clickedElement.className);
+
+                // Check if the clicked element is an lg_node
+                if (clickedElement.classList.contains('lg_node')) {
+                    let sibling = clickedElement.previousElementSibling;
+
+                    // Check if there's a sibling and if it's an lg_condition
+                    if (sibling && sibling.classList.contains('lg_condition')) {
+                        console.log('lg_condition sibling text length:', sibling.textContent.length);
+                    } else {
+                        console.log('No lg_condition sibling found');
+                    }
+                }
+            } else {
+                console.log('Clicked in element without a class');
+            }
+        }
+
+        function calculateTrueOffset(element, clickOffset, spacer = '') {
+            let trueOffset = 0;
+            let currentNode = element.firstChild;
+            const conditionLength = getLgConditionLength(element);
+            return conditionLength + clickOffset;
+        }
+        // function nope() {
+        //     console.log(spacer + "CALCULATE TRUE OFFSET", element, clickOffset);
+        //
+        //     while (currentNode) {
+        //         if (currentNode.nodeType === Node.TEXT_NODE) {
+        //             console.log(spacer + "TEXT_NODE: ", currentNode.textContent);
+        //             if (clickOffset > currentNode.length) {
+        //                 trueOffset += currentNode.length;
+        //                 clickOffset -= currentNode.length;
+        //             } else {
+        //                 return trueOffset + clickOffset;
+        //             }
+        //         } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
+        //             console.log(spacer + "ELEMENT_NODE: ", currentNode);
+        //             if (clickOffset > 0) {
+        //                 let nodeLength = currentNode.textContent.length;
+        //                 if (clickOffset > nodeLength) {
+        //                     trueOffset += nodeLength;
+        //                     clickOffset -= nodeLength;
+        //                 } else {
+        //                     let trueOffsetInChild = calculateTrueOffset(currentNode, clickOffset, spacer + "  ");
+        //                     return trueOffset + trueOffsetInChild;
+        //                 }
+        //             } else {
+        //                 // If clickOffset is 0 and we're at an element node, we're at the start of this element
+        //                 return trueOffset;
+        //             }
+        //         }
+        //         currentNode = currentNode.nextSibling;
+        //     }
+        //
+        //     return trueOffset;
+        // }
+
+        function updateCursorInfo(element, charIndex) {
+            console.log("updateCursorInfo: ", element, charIndex);
+            const lineElement = element.closest('.line') || element;
+            if (lineElement) {
+                const lineIndex = parseInt(lineElement.getAttribute('data-line-index'));
+                if (charIndex === undefined) {
+                    const sel = window.getSelection();
+                    const range = sel.getRangeAt(0);
+                    const preCaretRange = range.cloneRange();
+                    preCaretRange.selectNodeContents(lineElement);
+                    preCaretRange.setEnd(range.endContainer, range.endOffset);
+                    charIndex = calculateTrueOffset(element, preCaretRange.toString().length);
+                }
+                cursorInfo.textContent = `Cursor Position: Line ${lineIndex}, Ch ${charIndex}`;
+                console.log(`Cursor updated - Line: ${lineIndex}, Ch: ${charIndex}`);
+            }
+        }
+
+        function handleLineInput(event) {
+            const lineElement = event.target;
+            console.log("lineElement: ", lineElement);
+            const lineIndex = parseInt(lineElement.getAttribute('data-line-index'));
+            console.log("lineIndex: ", lineIndex);
+            const oldText = lines[lineIndex];
+            const newText = lineElement.textContent;
+console.log("oldText: ", oldText);
+console.log("newText: ", newText);
+            // Calculate cursor position in raw text
+            const selection = window.getSelection();
+            console.log("selection: ", selection);
+            console.log("selection.anchorOffset: ", selection.anchorOffset);
+            let cursorPosition = calculateTrueOffset(lineElement, selection.anchorOffset, " ");
+console.log("cursorPosition: ", cursorPosition);
+const span = getSpanWhereInputIsOccurring();
+console.log("span: ", span);
+let lgConditionLength = getLgConditionLength(span);
+console.log("lgConditionLength: ", lgConditionLength);
+if (lgConditionLength > 0) {
+    // count leading spaces in newText
+    const leadingSpaces = newText.match(/^\s*/)[0];
+    console.log("leadingSpaces: ", leadingSpaces);
+    lgConditionLength += leadingSpaces.length + 1;
+    console.log("UPDATED: lgConditionLength: ", lgConditionLength);
+}
+            // Update the raw text
+            console.log("Before update raw text: '" + lines[lineIndex] + "'");
+            lines[lineIndex] = newText;
+console.log("Updated raw text: '" + lines[lineIndex] + "'");
+            // Re-render the line
+            renderLine(lineIndex);
+
+            // Restore cursor position
+            cursorPosition += lgConditionLength;
+            console.log("Setting cursor position to: ", cursorPosition);
+            setCaretPosition(lineElement, cursorPosition);
+            updateCursorInfo(lineElement, cursorPosition);
+            sendGraphToBackend(lineIndex, oldText, newText, cursorPosition);
+        }
+
+        function setCaretPosition(element, position) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            let currentOffset = 0;
+            let targetNode = null;
+            let targetOffset = 0;
+console.log("element: ", element);
+            function traverseNodes(node) {
+                if (currentOffset >= position) return true;
+                if (node.nodeType === Node.TEXT_NODE) {
+                    if (currentOffset + node.length >= position) {
+                        targetNode = node;
+                        targetOffset = position - currentOffset;
+                        return true;
+                    }
+                    currentOffset += node.length;
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    for (let i = 0; i < node.childNodes.length; i++) {
+                        if (traverseNodes(node.childNodes[i])) return true;
+                    }
+                }
+                return false;
+            }
+
+            traverseNodes(element);
+
+            if (targetNode) {
+                console.log("targetNode: ", targetNode);
+                range.setStart(targetNode, targetOffset);
+            } else {
+            console.log("element.childNodes[0]: ", element.childNodes[0]);
+                range.selectNodeContents(element);
+                range.collapse(false);
+            }
+
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function colorCode(line) {
+            const trimmedLine = line.trim();
+            const leadingSpaces = line.match(/^\s*/)[0];
+
+            if (trimmedLine.match(/^[a-zA-Z_]+$/)) {
+                return `<span class="cyan">${leadingSpaces}${trimmedLine}</span>`;
+            } else if (trimmedLine.startsWith('=>')) {
+                return `<span class="lg_node">${leadingSpaces}${trimmedLine}</span>`;
+            } else if (trimmedLine.includes('=>')) {
+                const parts = trimmedLine.split('=>');
+                const condition = parts[0].trim();
+                const rest = parts.slice(1).join('=>').trim();
+                return `<span class="lg_condition">${leadingSpaces}${condition}</span> <span class="lg_node">=> ${rest}</span>`;
+            }
+            return `<span>${line}</span>`;
+        }
+
+        function renderLine(lineIndex) {
+            const lineElement = editor.children[lineIndex];
+            lineElement.innerHTML = colorCode(lines[lineIndex]);
+        }
+
+        function renderLines() {
+            editor.innerHTML = lines.map((line, index) =>
+                    `<div class="line" contenteditable="true" data-line-index="${index}">${colorCode(line)}</div>`
+            ).join('');
+            attachLineListeners();
+        }
+
+        function getSpanWhereInputIsOccurring() {
+            const selection = document.getSelection();
+            if (!selection.rangeCount) return null; // No selection or caret
+
+            const range = selection.getRangeAt(0);
+            let node = range.startContainer;
+
+            // Traverse up the DOM from the startContainer to find a span or stop at div
+            while (node) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.tagName === 'SPAN') {
+                        return node; // Found the span
+                    } else if (node.tagName === 'DIV') {
+                        return null; // Found a div, stop searching
+                    }
+                }
+                node = node.parentElement;
+            }
+
+            return null; // If no span or div is found
+        }
+
+        function attachLineListeners() {
+            document.querySelectorAll('.line').forEach(lineElement => {
+                lineElement.addEventListener('input', handleLineInput);
+                lineElement.addEventListener('keydown', handleLineKeydown);
+                lineElement.addEventListener('click', handleLineClick);
+                lineElement.addEventListener('focus', (e) => updateCursorInfo(e.target));
+            });
+        }
+
+        function handleLineKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const lineElement = event.target;
+                const lineIndex = parseInt(lineElement.getAttribute('data-line-index'));
+                const cursorPosition = window.getSelection().anchorOffset;
+                const currentLine = lines[lineIndex];
+                console.log("currentLine: ", currentLine);
+                const newLine = currentLine.slice(cursorPosition);
+                lines[lineIndex] = currentLine.slice(0, cursorPosition);
+                lines.splice(lineIndex + 1, 0, newLine);
+                renderLines();
+                focusLine(lineIndex + 1, 0);
+                sendGraphToBackend();
+            }
+        }
+
+        function focusLine(lineIndex, charIndex) {
+            const lineElement = editor.children[lineIndex];
+            if (lineElement) {
+                lineElement.focus();
+                setCaretPosition(lineElement, charIndex);
+                updateCursorInfo(lineElement, charIndex);
+            }
+        }
+
+        function updateCursorInfo(element, charIndex) {
+            const conditionLength = getLgConditionLength(element);
+            const lineElement = element.closest('.line') || element;
+            if (lineElement) {
+                const lineIndex = parseInt(lineElement.getAttribute('data-line-index'));
+                if (charIndex === undefined) {
+                    const sel = window.getSelection();
+                    charIndex = sel.anchorOffset + conditionLength;
+                }
+                cursorInfo.textContent = `Cursor Position: Line ${lineIndex}, Ch ${charIndex}`;
+            }
+        }
+
+        function sendGraphToBackend(changedLineIndex, oldLineText, newLineText, cursorPosition) {
+            const graph = lines.join('\n');
+            fetch('/update_graph', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    graph: graph,
+                    changedLine: {
+                        index: changedLineIndex,
+                        oldText: oldLineText,
+                        newText: newLineText,
+                        cursorPosition: cursorPosition
+                    }
+                }),
+            })
+                    .then(response => response.json())
+                    .then(data => console.log('Success:', data))
+                    .catch((error) => console.error('Error:', error));
+        }
+
+// Initialize with some content
+        lines = [
+            "agent",
+            "  => evaluator",
+            "",
+            "evaluator",
+            "  good_enough => END",
+            "  => agent"
+        ];
+        renderLines();
+        sendGraphToBackend();
+
+// Add a click listener to the editor to handle clicks between lines
+        editor.addEventListener('click', (event) => {
+            if (event.target === editor) {
+                const lineIndex = Math.min(
+                        Math.floor(event.offsetY / (event.target.clientHeight / lines.length)),
+                        lines.length - 1
+                );
+                focusLine(lineIndex, 0);
+            }
+        });
+    });
+</script>
+</body>
+</html>
