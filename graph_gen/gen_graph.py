@@ -195,7 +195,7 @@ def true_fn(state):
     return True
 
 
-def gen_graph(graph_name, graph_spec, memory=None):
+def gen_graph(graph_name, graph_spec, compile_args=None):
     graph, start_node = parse_graph_spec(graph_spec)
     nodes_added = []
 
@@ -226,12 +226,11 @@ def gen_graph(graph_name, graph_spec, memory=None):
         conditional_edges = mk_conditional_edges(graph_name, node_name, node_dict)
         if conditional_edges:
             node_code.append(conditional_edges)
-    mem_spec = ""
-    if memory:
-        mem_spec = f"checkpointer={memory}"
+
+    compile_args = compile_args if compile_args else ""
     return (
         graph_setup
         + "\n".join(node_code)
         + "\n\n"
-        + f"{graph_name} = {graph_name}.compile({mem_spec})"
+        + f"{graph_name} = {graph_name}.compile({compile_args})"
     )
