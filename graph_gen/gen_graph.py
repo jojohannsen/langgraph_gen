@@ -8,20 +8,15 @@ def transform_graph_spec(graph_spec: str) -> str:
     for line in lines:
         if "=>" in line and not line[0].isspace():
             parts = line.split("=>")
-            left_side = parts[0].strip()
-            right_side = parts[1].strip()
-
-            # Split the left side by commas and handle each part
-            left_parts = left_side.split(",")
-            for left_part in left_parts:
-                if left_part.strip():  # Check if left part is not empty
-                    transformed_lines.append(left_part.strip())
-                    transformed_lines.append(f"  => {right_side}")
+            if parts[0].strip():
+                transformed_lines.append(parts[0].strip())
+                transformed_lines.append(f"  => {parts[1].strip()}")
+            else:
+                transformed_lines.append(line)
         else:
             transformed_lines.append(line)
 
     return "\n".join(transformed_lines)
-
 
 
 def parse_string(input_string):
